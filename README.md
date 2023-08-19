@@ -55,5 +55,5 @@ timerStart()
 timerStop()
 object duration = timerDuration();
 print("Duration:", duration.microseconds, "microseconds")
-print("Duration:", timerDuration().milliseconds, "miliseconds", "sep= ")
+print("Duration:", timerDuration().milliseconds, "miliseconds")
 ```
