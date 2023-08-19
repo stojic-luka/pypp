@@ -54,6 +54,6 @@ func addition = complex();
 timerStart()
 timerStop()
 object duration = timerDuration();
-print("Duration:", duration.microseconds, "miliseconds")
+print("Duration:", duration.microseconds, "microseconds")
 print("Duration:", timerDuration().milliseconds, "miliseconds", "sep= ")
 ```
