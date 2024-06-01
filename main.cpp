@@ -1,71 +1,73 @@
-#include <fstream>
-#include <iomanip>
 #include <iostream>
-#include <string>
-#include <vector>
+#include <fstream>
+#include <sstream>
 
-#include "frontend/ast.h"
-#include "frontend/parser.h"
-#include "globalVars.h"
-#include "runtime/environment.h"
-#include "runtime/interpreter.h"
-#include "runtime/values.h"
+#include "src/parser/parser.h"
+#include "src/utils/ArgsParser.h"
+#include "src/ast/program.h"
 
-std::string loadSourceCode(std::string fileName) {
-    std::ifstream file(fileName);
-    if (!file.is_open())
-        std::runtime_error("Could not open file: " + fileName + "\n");
-    file.seekg(-1, std::ios_base::end);
-    char lastChar;
-    file.get(lastChar);
-    file.close();
-    if (lastChar != '\n') {
-        std::ofstream outFile(fileName, std::ios_base::app);
-        outFile << '\n';
-        outFile.close();
-    }
-    std::ifstream inputFile(fileName);
-    std::string fileContent((std::istreambuf_iterator<char>(inputFile)), std::istreambuf_iterator<char>());
-    return fileContent;
+#include "src/globalVals.h"
+#include "src/runtime/environment.h"
+#include "src/runtime/interpreter.h"
+#include "src/types/valueTypes.h"
+
+//size_t allocatedMemory = 0;
+
+//void* operator new(std::size_t size) {
+//    std::cout << "add " << size << std::endl;
+//    return std::malloc(size);
+//}
+//void operator delete(void* memory, size_t size) {
+//    std::cout << "free " << size << std::endl;
+//    std::free(memory);
+//}
+
+std::string loadSource(std::string fileName) {
+	std::ifstream file;
+	file.open(fileName);
+	if (fileName.empty()) {
+		std::cerr << "No provided file name." << std::endl;
+		return "";
+	}
+	if (!file.is_open()) {
+		std::cerr << "Error opening file: " << fileName << std::endl;
+		return "";
+	}
+	std::stringstream buffer;
+	buffer << file.rdbuf();
+	file.close();
+	return buffer.str();
 }
 
-bool isDebug;
+int main(int argc, char* argv[]) {
+	ArgsParser input(argc, argv);
 
-size_t allocatedMemory = 0;
-void *operator new(std::size_t size) {
-    std::cout << "allocating " << size << "bytes" << std::endl;
-    allocatedMemory += size;
-    return std::malloc(size);
-}
-void operator delete(void *memory, size_t size) {
-    std::cout << "freeing " << size << "bytes" << std::endl;
-    allocatedMemory -= size;
-    std::free(memory);
-}
+	if (input.cmdOptionExists("--debug"))
+		isDebug = true;
+	
+	const std::string& fileName = input.getCmdOption("-f");
+	if (!fileName.empty()) {
+		std::cerr << "" << fileName << std::endl;
+		return -1;
+	}
 
-int main(int argc, char *argv[]) {
-    std::string fileName;
-    for (int i = 1; i < argc; ++i) {
-        if (std::string(argv[i]) == "--debug")
-            isDebug = true;
-        else
-            fileName = std::string(argv[i]);
-    }
+	std::string sourceCode = loadSource("main.pypp");
+	//std::string sourceCode = loadSource(fileName);
+	if (sourceCode.empty())
+		return 0;
 
-    // std::cout << std::setprecision(20);
+	Parser parser = Parser();
+	Environment* env = Environment::createGlobalEnv();
 
-    Parser parser = Parser();
-    Program *program = parser.produceAST(loadSourceCode(fileName));
-    Environment *env = Environment::createGlobalEnv();
-    evaluate(program, env);
+	Program* program = parser.produceAST(sourceCode);
+	evaluate(program, env);
 
-    // std::cout << *program << std::endl;
-    // std::cout << *env << std::endl;
+	std::cout << *program;
+	std::cout << *env;
+	//std::cout << env->getVariables().size();
 
-    delete program;
-    delete env;
+	delete program;
+	delete env;
 
-    std::cout << "memory: " << allocatedMemory << std::endl;
-
-    return 0;
+	return 0;
 }
